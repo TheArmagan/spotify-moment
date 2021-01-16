@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SPOTIFY MOMENT - DISPLAY</title>
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+        outline: 0;
+        box-sizing: border-box;
+        user-select: none;
+      }
+
+      html,
+      body {
+        background-color: transparent;
+      }
+
+      .container {
+        width: 100vw;
+        height: 100vh;
+
+        display: flex;
+
+        justify-content: center;
+        align-items: center;
+      }
+
+      .main {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: opacity 300ms ease-in-out;
+      }
+
+      .main.hidden {
+        opacity: 0;
+      }
+
+      .shadow {
+        box-shadow: 0 2.8px 2.2px rgba(0, 0, 0, 0.02),
+          0 6.7px 5.3px rgba(0, 0, 0, 0.028), 0 12.5px 10px rgba(0, 0, 0, 0.035),
+          0 22.3px 17.9px rgba(0, 0, 0, 0.042),
+          0 41.8px 33.4px rgba(0, 0, 0, 0.05), 0 100px 80px rgba(0, 0, 0, 0.07);
+      }
+
+      .artwork {
+        width: 260px;
+        height: 260px;
+        background-size: 260px;
+        display: inline-block;
+        background-color: #2a2a2a;
+        z-index: 100;
+      }
+
+      .infobox {
+        height: 140px;
+        width: 400px;
+        background-position: center;
+        background-size: 400px;
+        display: inline-block;
+        position: relative;
+        background-color: #f8f8f8;
+
+        margin-top: 64px;
+      }
+
+      .infobox-image-container {
+        overflow: hidden;
+        position: absolute;
+        height: 140px;
+        width: 400px;
+      }
+
+      .infobox-image {
+        height: 600px;
+        width: 600px;
+        filter: blur(12px);
+        background-size: 400px;
+        background-position: center;
+        overflow: hidden;
+        display: inline-block;
+        margin-top: -100px;
+        margin-left: -100px;
+      }
+
+      .infobox-info {
+        height: 140px;
+        width: 400px;
+        z-index: 1000;
+        font-family: "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande",
+          "Lucida Sans", Arial, sans-serif;
+        color: rgb(250, 250, 250);
+        text-shadow: 1px 1px 2px #2a2a2a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: clip;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .infobox-wrapper {
+        width: 400px;
+        display: inline-block;
+      }
+
+      .title {
+        font-size: 32px;
+        font-weight: 600;
+      }
+
+      .artist {
+        font-size: 20px;
+      }
+
+      .marquee span {
+        display: inline-block;
+        padding-left: 100%;
+        will-change: transform;
+        animation: marquee 15s linear infinite;
+      }
+
+      @keyframes marquee {
+        0% {
+          transform: translate(0, 0);
+        }
+        100% {
+          transform: translate(-100%, 0);
+        }
+      }
+
+      .progressbar {
+        width: 0px;
+        height: 6px;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        display: inline-block;
+        background-color: rgba(0, 0, 0, 0.35);
+        transition: width 1s linear;
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+        filter: drop-shadow(0px 0px 2px rgb(255, 255, 255));
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="main hidden">
+        <div
+          class="artwork shadow"
+        ></div>
+        <div class="infobox shadow">
+          <div class="infobox-image-container">
+            <img class="infobox-image"></img>
+          </div>
+          <div class="infobox-info">
+            <div class="infobox-wrapper">
+                <p class="title marquee">
+                <span>TITLE</span>
+              </p>
+              <p class="artist marquee">
+                <span>ARTIST</span>
+              </p>
+            </div>
+            <div class="progressbar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+  <script>
+    const url = new URL(window.location.href);
+    const sleep = function (ms = 100) {
+      return new Promise(function (resolve) {
+        setTimeout(resolve, ms);
+      });
+    };
+
+    const main = document.querySelector(".main");
+    const title = document.querySelector(".title");
+    const artist = document.querySelector(".artist");
+    const artwork = document.querySelector(".artwork");
+    const infobox = document.querySelector(".infobox");
+    const infoboxImage = document.querySelector(".infobox-image");
+    const progressbar = document.querySelector(".progressbar");
+
+    let lastInfo = {};
+
+    setInterval(async () => {
+      const info = await getState();
+      if (!info.hasOwnProperty("is_playing") && !url.searchParams.has("doNotRedirect")) return window.location.replace("/auth");
+
+      if (!info.is_playing && !url.searchParams.has("doNotHide")) main.classList.add("hidden");
+
+      if (((lastInfo || {}).item || {}).name != info.item.name) {
+        main.classList.add("hidden");
+        document.title = ``
+        await sleep(300);
+
+        title.innerHTML = `<span>${info.item.name}</span>`;
+        artist.innerHTML = `<span>${info.item.album.name}</span>`;
+        updateImages(info.item.album.images[0].url);
+      }
+
+      if (info.is_playing) {
+        progressbar.setAttribute("style", `width: ${percentage(info.progress_ms,info.item.duration_ms)*4}px`);
+        main.classList.remove("hidden");
+      }
+
+      lastInfo = info;
+    }, 1000);
+
+    async function getState() {
+      let state = await fetch("/state").then((d) => d.json());
+      return state;
+    }
+
+    function updateImages(url) {
+      artwork.setAttribute(
+        "style",
+        `background-image: url('${url}')`
+      );
+
+      infoboxImage.setAttribute(
+        "src",
+        url
+      );
+    }
+
+    function percentage(partialValue, totalValue) {
+      return (100 * partialValue) / totalValue;
+    }
+
+    const bgColor = url.searchParams.get("bgColor");
+    if (bgColor) {
+      document.documentElement.setAttribute("style",`background-color:#${bgColor};`);
+    }
+  </script>
+</html>
