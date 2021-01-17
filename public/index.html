@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SPOTIFY MOMENT - DISPLAY</title>
+    <title>Spotify Moment</title>
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@5.9.55/css/materialdesignicons.min.css"> -->
     <style>
       * {
         padding: 0;
@@ -35,7 +36,7 @@
         transition: opacity 300ms ease-in-out;
       }
 
-      .main.hidden {
+      .hidden {
         opacity: 0;
       }
 
@@ -53,6 +54,7 @@
         display: inline-block;
         background-color: #2a2a2a;
         z-index: 100;
+        position: relative;
       }
 
       .infobox {
@@ -146,6 +148,41 @@
         border-bottom-right-radius: 8px;
         filter: drop-shadow(0px 0px 2px rgb(255, 255, 255));
       }
+
+      @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap');
+
+      .watermark {
+        position: absolute;
+        bottom: 4px;
+        left: 4px;
+        color: rgba(255, 255, 255, 0.15);
+        font-size: 12px;
+        font-weight: 300;
+        font-family: 'Roboto', sans-serif;
+      }
+
+      .pause-icon-container {
+        width: 260px;
+        height: 260px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .pause-icon {
+        width: 260px;
+        height: 260px;
+        color: rgba(255, 255, 255, 0.5);
+        transition: all 500ms ease-in-out;
+      }
+
+      .pause-icon.hidden {
+        transform: scale(0) rotateZ(90deg);
+        opacity: 0;
+      }
     </style>
   </head>
   <body>
@@ -153,7 +190,16 @@
       <div class="main hidden">
         <div
           class="artwork shadow"
-        ></div>
+        >
+        <div class="pause-icon-container">
+          <div class="pause-icon">
+<svg viewBox="0 0 24 24">
+    <path fill="currentColor" d="M15,16H13V8H15M11,16H9V8H11M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
+</svg>
+          </div>
+        </div>
+        <div class="watermark">Spotify Moment</div>
+      </div>
         <div class="infobox shadow">
           <div class="infobox-image-container">
             <img class="infobox-image"></img>
@@ -188,28 +234,49 @@
     const infobox = document.querySelector(".infobox");
     const infoboxImage = document.querySelector(".infobox-image");
     const progressbar = document.querySelector(".progressbar");
+    const pauseIcon = document.querySelector(".pause-icon");
 
     let lastInfo = {};
+
+    if (url.searchParams.has("doNotHide")) {
+      main.classList.remove("hidden");
+    } else {
+      pauseIcon.classList.add("hidden");
+    }
 
     setInterval(async () => {
       const info = await getState();
       if (!info.hasOwnProperty("is_playing") && !url.searchParams.has("doNotRedirect")) return window.location.replace("/auth");
-
-      if (!info.is_playing && !url.searchParams.has("doNotHide")) main.classList.add("hidden");
+      
+      if (!info.is_playing) {
+        if (url.searchParams.has("doNotHide")) {
+          pauseIcon.classList.remove("hidden");
+        } else {
+          main.classList.add("hidden");
+        }
+      }
 
       if (((lastInfo || {}).item || {}).name != info.item.name) {
         main.classList.add("hidden");
-        document.title = ``
+        const _title = info.item.name;
+        const _artists = info.item.artists.map(i=>i.name).join(", ");
+        document.title = `${_title} - ${_artists} | Spotify Moment`;
         await sleep(300);
 
-        title.innerHTML = `<span>${info.item.name}</span>`;
-        artist.innerHTML = `<span>${info.item.album.name}</span>`;
+        title.innerHTML = `<span>${_title}</span>`;
+        artist.innerHTML = `<span>${_artists}</span>`;
         updateImages(info.item.album.images[0].url);
+        main.classList.remove("hidden");
       }
 
       if (info.is_playing) {
         progressbar.setAttribute("style", `width: ${percentage(info.progress_ms,info.item.duration_ms)*4}px`);
-        main.classList.remove("hidden");
+        
+        if (url.searchParams.has("doNotHide")) {
+          pauseIcon.classList.add("hidden");
+        } else {
+          main.classList.remove("hidden");
+        }
       }
 
       lastInfo = info;
@@ -239,6 +306,9 @@
     const bgColor = url.searchParams.get("bgColor");
     if (bgColor) {
       document.documentElement.setAttribute("style",`background-color:#${bgColor};`);
+    }
+    if (url.searchParams.has("hideWatermark")) {
+      document.querySelector(".watermark").classList.add("hidden");
     }
   </script>
 </html>

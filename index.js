@@ -1,10 +1,15 @@
+console.log(`[SYSTEM:MAIN] Spotify Moment is starting..`);
+process.title = `Spotify Moment | Loading..`;
 const express = require('express');
 const app = express();
 const port = 6282;
-app.listen(port, () => { console.log(`EXPRESS IS READY! *:${port}`) });
 const SpotifyWebApi = require('spotify-web-api-node');
 const fs = require('fs');
 const Jimp = require('Jimp');
+const safeEval = require('safe-eval');
+const dayjs = require('dayjs');
+const dayjs_plugin_duration = require('dayjs/plugin/duration');
+dayjs.extend(dayjs_plugin_duration);
 
 const clientId = "85141f2dc2954c9a84de93ab57f3865f";
 const clientSecret = "129fedf54dfd40d6b432a89407cf09de";
@@ -30,25 +35,30 @@ let playbackState = {};
 app.use(express.static(__dirname + "/public"));
 app.use("/state", express.static(__dirname + "/state"));
 
-app.get("/", (req, res) => {
-  res.send(req.query.message || "please login");
-});
-
 app.get("/state", (req, res) => {
   res.send(playbackState);
 })
 
 app.get("/auth", (req, res) => {
-  if (authCode) return res.send("already logged in!");
+  if (authCode) return res.redirect("/");
+  console.log(`[SYSTEM:AUTH] Redirecting to Spotify's auth page..`);
   res.redirect(authUrl);
 });
 
 app.get("/auth/callback", (req, res) => {
   if (authCode) return res.send("already logged in!");
+  console.log(`[SYSTEM:AUTH] Auth callback called!`);
   res.redirect("/");
   authCode = req.query.code;
   doEverythingElse()
 })
+
+app.listen(port, () => {
+  console.log(`[SYSTEM:MAIN] Spotify Moment is started!`);
+  console.log(`[SYSTEM:MAIN] Web server is ready! Listening on port ${port}`);
+  console.log(`[SYSTEM:AUTH] Waiting for auth! http://127.0.0.1:${port}/auth`);
+  process.title = `Spotify Moment | Waiting for auth..`;
+});
 
 let isLoaded = false;
 
@@ -56,7 +66,9 @@ async function doEverythingElse() {
   if (isLoaded) return;
   isLoaded = true;
 
+  console.log(`[SYSTEM:AUTH] Authorization is granting..`);
   let authResponse = await spotify.authorizationCodeGrant(authCode);
+  console.log(`[SYSTEM:AUTH] Authorization is granted!`);
 
   spotify.setAccessToken(authResponse.body.access_token);
   spotify.setRefreshToken(authResponse.body.refresh_token);
@@ -64,20 +76,23 @@ async function doEverythingElse() {
   accessToken = authResponse.body.access_token;
   lastTokenRefreshed = Date.now();
 
-  console.log(authResponse.body);
-
+  process.title = `Spotify Moment | Waiting for state update..`;
+  console.log(`[SYSTEM:MAIN] State updater is started!`);
   setInterval(async () => {
-    const newState = (await spotify.getMyCurrentPlaybackState()).body;
-    playbackState = newState;
-    onStateChange(newState);
-  }, 100);
+    let newState = {};
+    try {
+      newState = (await spotify.getMyCurrentPlaybackState()).body;
+    } catch { };
+    if (newState.hasOwnProperty("item")) {
+      playbackState = newState;
+      onStateChange(playbackState);
+    }
+  }, 998);
 
 }
 
 let currentSongId = "";
 let currentAlbumId = "";
-
-let templateFileNames = fs.readdirSync(__dirname + "/state").filter(i => i.startsWith("template_") && i.endsWith(".txt"));
 
 const keywords = [
   ["track-name", "$.item.name"],
@@ -87,48 +102,107 @@ const keywords = [
   ["album-size", "$.item.album.total_tracks"],
   ["album-release-date", "$.item.album.release_date"],
   ["track-artist-names", "$.item.artists.map(i=>i.name).join(', ')"],
-  ["is-track-explicit", "$.item.explicit"],
   ["album-artist-names", "$.item.album.artists.map(i=>i.name).join(', ')"],
   ["track-duration-ms", "$.item.duration_ms"],
+  ["track-duration-formatted", `dayjs.duration($.item.duration_ms).format('m:s')`],
+  ["track-progress-ms", `$.progress_ms`],
+  ["track-progress-formatted", `dayjs.duration($.progress_ms).format('m:s')`],
+  ["when-playing", "$.is_playing ? keys[1] : keys[2]"],
+  ["when-explicit", "$.item.explicit ? keys[1] : keys[2]"],
 ]
 
-// `[track-title] - [track-artist-names]`.replace(/\[([a-zA-Z-]+)\]/gm, (_, keyWord) => {
-//   return `${keyWord}__`
-// })
-// TODO: Implement keyword parsing system (probably gonna use safe eval for parsing)
+/**
+ * @param {String} text 
+ * @param {Any} $ 
+ * @returns {String}
+ */
+function parseKeywords(text = "", $ = {}) {
+  return text.replace(/\[([^\[\]]+)\]/gm, (_, keyword) => {
+    const keys = keyword.split(";");
+    let keyData = keywords.find(i => i[0] == keys[0]);
+    if (keyData) {
+      try {
+        return safeEval(keyData[1], { $, dayjs, keyword, keys });
+      } catch (e) {
+        console.log(require("util").inspect(e, true, 6));
+      }
+    } else {
+      return `[${keyword}]`;
+    }
+  })
+}
+
+console.log(`[SYSTEM:MAIN] Reading template files..`);
+let templateFiles = fs.readdirSync(__dirname + "/state")
+  .filter(i => i.startsWith("template_") && i.endsWith(".txt"))
+  .map(templateFileName => {
+    const template = fs.readFileSync(__dirname + "/state/" + templateFileName, "utf-8");
+    console.log(`[SYSTEM:MAIN] ${templateFileName} template file is loaded!`);
+    const fileName = templateFileName.slice(9).replace("cwp_", "");
+    const clearWhenPaused = templateFileName.includes("cwp_")
+    return { template, fileName, clearWhenPaused }
+  });
+
+let _lastDurationStateUpdate = Date.now();
+let lastPlayingState = false;
 
 /**
  * 
- * @param {SpotifyApi.CurrentPlaybackResponse} state 
+ * @param {SpotifyApi.CurrentPlaybackResponse} $ 
  */
-async function onStateChange(state) {
-  if (currentSongId != state.item.id) {
-    currentSongId = state.item.id;
+async function onStateChange($) {
+  if (!$.hasOwnProperty("item")) return;
 
-    templateFileNames.forEach((fileName) => {
-      content = fs.promises.readFile
+  process.title = `Spotify Moment | ${dayjs.duration($?.progress_ms).format('mm:ss')}/${dayjs.duration($?.item?.duration_ms).format('mm:ss')} | ${$?.is_playing ? `${$?.item?.name} - ${$?.item?.artists?.map(i => i?.name).join(', ')}` : "Paused"}`;
+
+  if (currentSongId != $.item.id) {
+    currentSongId = $.item.id;
+    console.log(`[SYSTEM:STATE] Song changed! (${$.item.id})`);
+    templateFiles.forEach(async (d) => {
+      const parsed = parseKeywords(d.template, $);
+      fs.promises.writeFile(__dirname + "/state/" + d.fileName, parsed, "utf-8");
     })
+  }
+
+  if (lastPlayingState != $.is_playing) {
+    console.log(`[SYSTEM:STATE] Playing state changed! (${$.is_playing})`);
+    lastPlayingState = $.is_playing;
+    templateFiles.filter(i => i.clearWhenPaused).forEach(async (d) => {
+      fs.promises.writeFile(__dirname + "/state/" + d.fileName, "", "utf-8");
+    });
+
 
   }
 
-  if (currentAlbumId != state.item.album.id) {
-    currentAlbumId = state.item.album.id;
-    let img = await Jimp.read(state.item.album.images[0].url);
-    await img.writeAsync(__dirname + "/state/artwork.jpg");
-    img = 0;
+  if (currentAlbumId != $?.item?.album?.id) {
+    currentAlbumId = $.item.album.id;
+    let img = await Jimp.read($.item.album.images[0].url);
+    console.log(`[SYSTEM:STATE] Artwork changed! (${$.item.album.id})`);
+    img.writeAsync(__dirname + "/state/artwork.jpg").then(() => {
+      img.writeAsync(__dirname + "/state/artwork_cwp.jpg").then(() => {
+        img = 0;
+      });
+    });
+  }
+
+  if (Date.now() - _lastDurationStateUpdate > 1000) {
+    templateFiles.forEach(async (d) => {
+      const parsed = parseKeywords(d.template, $);
+      fs.promises.writeFile(__dirname + "/state/" + d.fileName, parsed, "utf-8");
+    })
+    _lastDurationStateUpdate = Date.now();
   }
 }
 
 
 let currentlyRefreshing = false;
 setInterval(async () => {
-  if (lastTokenRefreshed != -1 && Date.now() - lastTokenRefreshed > 30 * 1000 * 60 && !currentlyRefreshing) {
-    console.log("refreshing the token yay!");
+  if (lastTokenRefreshed != -1 && Date.now() - lastTokenRefreshed > 15 * 1000 * 60 && !currentlyRefreshing) {
+    console.log(`[SYSTEM:AUTH] Refreshing auth token..`);
     currentlyRefreshing = true;
     let refreshResponse = await spotify.refreshAccessToken();
     spotify.setAccessToken(refreshResponse.body.access_token);
-    spotify.setRefreshToken(refreshResponse.body.refresh_token);
-    console.log("auth token refreshed!");
+    console.log(`[SYSTEM:AUTH] Auth token refreshed!`);
     lastTokenRefreshed = Date.now();
     currentlyRefreshing = false;
   }
