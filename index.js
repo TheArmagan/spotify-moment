@@ -174,12 +174,10 @@ async function onStateChange($) {
 
   if (currentAlbumId != $?.item?.album?.id) {
     currentAlbumId = $.item.album.id;
-    Jimp.read($.item.album.images[0].url).then(img => {
-      img.writeAsync(__dirname + "/state/artwork.jpg").then(() => {
-        img.writeAsync(__dirname + "/state/artwork_cwp.jpg").then(() => {
-          img = 0;
-        });
-      });
+    Jimp.read($.item.album.images[0].url).then(async img => {
+      await img.writeAsync(__dirname + "/state/artwork.png");
+      await img.writeAsync(__dirname + "/state/artwork_cwp.png");
+      img = 0;
     })
     console.log(`[SYSTEM:STATE] Artwork changed! (${$.item.album.id})`);
   }
@@ -199,11 +197,17 @@ async function onStateChange($) {
     templateFiles.filter(i => i.clearWhenPaused).forEach(async (d) => {
       fs.promises.writeFile(__dirname + "/state/" + d.fileName, "", "utf-8");
     });
-    Jimp.create(640, 640, 0x00000000).then(img => {
-      img.writeAsync(__dirname + "/state/artwork_cwp.jpg").then(() => {
+    if ($.is_playing) {
+      Jimp.read($.item.album.images[0].url).then(async img => {
+        await img.writeAsync(__dirname + "/state/artwork_cwp.png");
         img = 0;
-      });
-    });
+      })
+    } else {
+      Jimp.create(640, 640, Jimp.rgbaToInt(0, 0, 0, 0)).then(async img => {
+        await img.writeAsync(__dirname + "/state/artwork_cwp.png");
+        img = 0;
+      })
+    }
 
   }
 
