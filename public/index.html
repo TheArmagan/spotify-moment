@@ -229,7 +229,9 @@
 
     const main = document.querySelector(".main");
     const title = document.querySelector(".title");
+    const titleSpan = document.querySelector(".title span");
     const artist = document.querySelector(".artist");
+    const artistSpan = document.querySelector(".artist span");
     const artwork = document.querySelector(".artwork");
     const infobox = document.querySelector(".infobox");
     const infoboxImage = document.querySelector(".infobox-image");
@@ -265,8 +267,8 @@
         document.title = `${_title} - ${_artists} | Spotify Moment`;
         await sleep(300);
 
-        title.innerHTML = `<span>${_title}</span>`;
-        artist.innerHTML = `<span>${_artists}</span>`;
+        titleSpan.textContent = _title;
+        artistSpan.textContent = _artists;
         updateImages(info.item.album.images[0].url);
         main.classList.remove("hidden");
       }
