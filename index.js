@@ -88,14 +88,14 @@ async function doEverythingElse() {
       newState = (await spotify.getMyCurrentPlaybackState()).body;
     } catch (e) { console.log(e) };
 
-    if (newState.hasOwnProperty("is_playing")) {
+    if (newState?.is_playing) {
       playbackState = newState;
     }
 
-    if (newState.hasOwnProperty("item")) {
+    if (newState?.item?.id) {
       onStateChange(playbackState);
     }
-  }, 998);
+  }, 500);
 
 }
 
@@ -159,8 +159,6 @@ let lastPlayingState = false;
  * @param {SpotifyApi.CurrentPlaybackResponse} $ 
  */
 async function onStateChange($) {
-  if (!$.hasOwnProperty("item")) return;
-
   process.title = `Spotify Moment | ${dayjs.duration($?.progress_ms).format('mm:ss')}/${dayjs.duration($?.item?.duration_ms).format('mm:ss')} | ${$?.is_playing ? `${$?.item?.name} - ${$?.item?.artists?.map(i => i?.name).join(', ')}` : "Paused"}`;
 
   if (currentSongId != $.item.id) {
@@ -205,7 +203,7 @@ async function onStateChange($) {
         img = 0;
       })
     } else {
-      Jimp.create(640, 640, Jimp.rgbaToInt(0, 0, 0, 0)).then(async img => {
+      Jimp.create($.item.album.images[0].width || 640, $.item.album.images[0].height || 640, Jimp.rgbaToInt(0, 0, 0, 0)).then(async img => {
         await img.writeAsync(__dirname + "/state/artwork_cwp.png");
         img = 0;
       })
