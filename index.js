@@ -45,6 +45,10 @@ app.get("/auth", (req, res) => {
   res.redirect(authUrl);
 });
 
+app.get("/auth/state", (req, res) => {
+  res.send({ state: !!authCode });
+});
+
 app.get("/auth/callback", (req, res) => {
   if (authCode) return res.send("already logged in!");
   console.log(`[SYSTEM:AUTH] Auth callback called!`);
@@ -82,9 +86,13 @@ async function doEverythingElse() {
     let newState = {};
     try {
       newState = (await spotify.getMyCurrentPlaybackState()).body;
-    } catch { };
-    if (newState.hasOwnProperty("item")) {
+    } catch (e) { console.log(e) };
+
+    if (newState.hasOwnProperty("is_playing")) {
       playbackState = newState;
+    }
+
+    if (newState.hasOwnProperty("item")) {
       onStateChange(playbackState);
     }
   }, 998);
@@ -164,25 +172,16 @@ async function onStateChange($) {
     })
   }
 
-  if (lastPlayingState != $.is_playing) {
-    console.log(`[SYSTEM:STATE] Playing state changed! (${$.is_playing})`);
-    lastPlayingState = $.is_playing;
-    templateFiles.filter(i => i.clearWhenPaused).forEach(async (d) => {
-      fs.promises.writeFile(__dirname + "/state/" + d.fileName, "", "utf-8");
-    });
-
-
-  }
-
   if (currentAlbumId != $?.item?.album?.id) {
     currentAlbumId = $.item.album.id;
-    let img = await Jimp.read($.item.album.images[0].url);
-    console.log(`[SYSTEM:STATE] Artwork changed! (${$.item.album.id})`);
-    img.writeAsync(__dirname + "/state/artwork.jpg").then(() => {
-      img.writeAsync(__dirname + "/state/artwork_cwp.jpg").then(() => {
-        img = 0;
+    Jimp.read($.item.album.images[0].url).then(img => {
+      img.writeAsync(__dirname + "/state/artwork.jpg").then(() => {
+        img.writeAsync(__dirname + "/state/artwork_cwp.jpg").then(() => {
+          img = 0;
+        });
       });
-    });
+    })
+    console.log(`[SYSTEM:STATE] Artwork changed! (${$.item.album.id})`);
   }
 
   if (Date.now() - _lastDurationStateUpdate > 1000) {
@@ -192,6 +191,22 @@ async function onStateChange($) {
     })
     _lastDurationStateUpdate = Date.now();
   }
+
+
+  if (lastPlayingState != $.is_playing) {
+    console.log(`[SYSTEM:STATE] Playing state changed! (${$.is_playing})`);
+    lastPlayingState = $.is_playing;
+    templateFiles.filter(i => i.clearWhenPaused).forEach(async (d) => {
+      fs.promises.writeFile(__dirname + "/state/" + d.fileName, "", "utf-8");
+    });
+    Jimp.create(640, 640, 0x00000000).then(img => {
+      img.writeAsync(__dirname + "/state/artwork_cwp.jpg").then(() => {
+        img = 0;
+      });
+    });
+
+  }
+
 }
 
 

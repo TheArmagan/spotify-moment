@@ -246,7 +246,9 @@
 
     setInterval(async () => {
       const info = await getState();
-      if (!info.hasOwnProperty("is_playing") && !url.searchParams.has("doNotRedirect")) return window.location.replace("/auth");
+      const authState = await getAuthState();
+      if (!authState) return window.location.replace("/auth");
+      if (!info.hasOwnProperty("is_playing")) return;
       
       if (!info.is_playing) {
         if (url.searchParams.has("doNotHide")) {
@@ -285,6 +287,11 @@
     async function getState() {
       let state = await fetch("/state").then((d) => d.json());
       return state;
+    }
+
+    async function getAuthState() {
+      let state = await fetch("/auth/state").then((d) => d.json());
+      return true;
     }
 
     function updateImages(url) {
