@@ -167,8 +167,10 @@ async function onStateChange($) {
     currentSongId = $.item.id;
     console.log(`[SYSTEM:STATE] Song changed! (${$.item.id})`);
     templateFiles.forEach(async (d) => {
-      const parsed = parseKeywords(d.template, $);
-      fs.promises.writeFile(__dirname + "/state/" + d.fileName, parsed, "utf-8");
+      if (d.clearWhenPaused == !$.is_playing) {
+        const parsed = parseKeywords(d.template, $);
+        fs.promises.writeFile(__dirname + "/state/" + d.fileName, parsed, "utf-8");
+      }
     })
   }
 
@@ -207,8 +209,10 @@ async function onStateChange($) {
         await img.writeAsync(__dirname + "/state/artwork_cwp.png");
         img = 0;
       })
+      templateFiles.filter(i => i.clearWhenPaused).forEach(d => {
+        fs.promises.writeFile(__dirname + "/state/" + d.fileName, "", "utf-8");
+      })
     }
-
   }
 
 }

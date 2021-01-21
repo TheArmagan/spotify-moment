@@ -291,7 +291,7 @@
 
     async function getAuthState() {
       let state = await fetch("/auth/state").then((d) => d.json());
-      return true;
+      return state;
     }
 
     function updateImages(url) {
