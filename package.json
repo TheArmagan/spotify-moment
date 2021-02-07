@@ -8,7 +8,7 @@
     "express": "^4.17.1",
     "jimp": "^0.16.1",
     "safe-eval": "^0.4.1",
-    "spotify-web-api-node": "^5.0.0"
+    "spotify-web-api-node": "^5.0.1"
   },
   "devDependencies": {},
   "scripts": {

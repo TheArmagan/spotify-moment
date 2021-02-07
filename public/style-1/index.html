@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spotify Moment</title>
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@5.9.55/css/materialdesignicons.min.css"> -->
+    <link rel="stylesheet" href="./index.css">
+  </head>
+  <body>
+    <div id="vue-app" class="container">
+      <div class="main" :class="{'hidden': mainHidden}">
+        <div
+          class="artwork shadow"
+          :style="`background-image: url('${(((((state || {}).item || {}).album || {}).images || [])[0] || {}).url}');`"
+        >
+        <div class="pause-icon-container">
+          <div class="pause-icon" :class="{'hidden': !pauseShow}">
+            <svg viewBox="0 0 24 24">
+                <path fill="currentColor" d="M15,16H13V8H15M11,16H9V8H11M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
+            </svg>
+          </div>
+        </div>
+        <div class="watermark">Spotify Moment</div>
+      </div>
+        <div class="infobox shadow">
+          <div class="infobox-image-container">
+            <img class="infobox-image" :src="(((((state || {}).item || {}).album || {}).images || [])[0] || {}).url"></img>
+          </div>
+          <div class="infobox-info">
+            <div class="infobox-wrapper">
+                <p class="title marquee">
+                <span>{{((state || {}).item || {}).name}}</span>
+              </p>
+              <p class="artist marquee">
+                <span>{{(((state || {}).item || {}).artists || []).map(i=>i.name).join(", ")}}</span>
+              </p>
+            </div>
+            <div class="progressbar" :style="`width: ${percentage((state || {}).progress_ms, ((state || {}).item || {}).duration_ms)*4}px`"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <script src="./index.js"></script>
+  </body>
+</html>

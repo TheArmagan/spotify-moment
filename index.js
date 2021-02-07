@@ -35,7 +35,7 @@ let playbackState = {};
 app.use(express.static(__dirname + "/public"));
 app.use("/state", express.static(__dirname + "/state"));
 
-app.get("/state", (req, res) => {
+app.get("/api/state", (req, res) => {
   res.send(playbackState);
 })
 
@@ -45,7 +45,7 @@ app.get("/auth", (req, res) => {
   res.redirect(authUrl);
 });
 
-app.get("/auth/state", (req, res) => {
+app.get("/api/auth/state", (req, res) => {
   res.send({ state: !!authCode });
 });
 
@@ -88,11 +88,8 @@ async function doEverythingElse() {
       newState = (await spotify.getMyCurrentPlaybackState()).body;
     } catch (e) { console.log(e) };
 
-    if (newState?.is_playing) {
-      playbackState = newState;
-    }
-
     if (newState?.item?.id) {
+      playbackState = newState;
       onStateChange(playbackState);
     }
   }, 500);

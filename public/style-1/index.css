@@ -1,0 +1,177 @@
+* {
+  padding: 0;
+  margin: 0;
+  outline: 0;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+html,
+body {
+  background-color: transparent;
+}
+
+.container {
+  width: 100vw;
+  height: 100vh;
+
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+}
+
+.main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 300ms ease-in-out;
+}
+
+.hidden {
+  opacity: 0;
+}
+
+.shadow {
+  box-shadow: 0 2.8px 2.2px rgba(0, 0, 0, 0.02),
+    0 6.7px 5.3px rgba(0, 0, 0, 0.028), 0 12.5px 10px rgba(0, 0, 0, 0.035),
+    0 22.3px 17.9px rgba(0, 0, 0, 0.042), 0 41.8px 33.4px rgba(0, 0, 0, 0.05),
+    0 100px 80px rgba(0, 0, 0, 0.07);
+}
+
+.artwork {
+  width: 260px;
+  height: 260px;
+  background-size: 260px;
+  display: inline-block;
+  background-color: #2a2a2a;
+  z-index: 100;
+  position: relative;
+}
+
+.infobox {
+  height: 140px;
+  width: 400px;
+  background-position: center;
+  background-size: 400px;
+  display: inline-block;
+  position: relative;
+  background-color: #f8f8f8;
+
+  margin-top: 64px;
+}
+
+.infobox-image-container {
+  overflow: hidden;
+  position: absolute;
+  height: 140px;
+  width: 400px;
+}
+
+.infobox-image {
+  height: 600px;
+  width: 600px;
+  filter: blur(12px);
+  background-size: 400px;
+  background-position: center;
+  overflow: hidden;
+  display: inline-block;
+  margin-top: -100px;
+  margin-left: -100px;
+}
+
+.infobox-info {
+  height: 140px;
+  width: 400px;
+  z-index: 1000;
+  font-family: "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande",
+    "Lucida Sans", Arial, sans-serif;
+  color: rgb(250, 250, 250);
+  text-shadow: 1px 1px 2px #2a2a2a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.infobox-wrapper {
+  width: 400px;
+  display: inline-block;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 600;
+}
+
+.artist {
+  font-size: 20px;
+}
+
+.marquee span {
+  display: inline-block;
+  padding-left: 100%;
+  will-change: transform;
+  animation: marquee 15s linear infinite;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(-100%, 0);
+  }
+}
+
+.progressbar {
+  width: 0px;
+  height: 6px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  display: inline-block;
+  background-color: rgba(0, 0, 0, 0.35);
+  transition: width 1s linear;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  filter: drop-shadow(0px 0px 2px rgb(255, 255, 255));
+}
+
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap");
+
+.watermark {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  color: rgba(255, 255, 255, 0.15);
+  font-size: 12px;
+  font-weight: 300;
+  font-family: "Roboto", sans-serif;
+}
+
+.pause-icon-container {
+  width: 260px;
+  height: 260px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pause-icon {
+  width: 260px;
+  height: 260px;
+  color: rgba(255, 255, 255, 0.5);
+  transition: all 500ms ease-in-out;
+}
+
+.pause-icon.hidden {
+  transform: scale(0) rotateZ(90deg);
+  opacity: 0;
+}
